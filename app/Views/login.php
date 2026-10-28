@@ -51,7 +51,7 @@
 <body>
     <div class="login-box">
         <h2>Gara Ô tô</h2>
-        <form>
+        <form method="POST" action="?page=login">
             <label for="username">Tên đăng nhập</label>
             <input type="text" id="username" name="username" required>
 

@@ -1,5 +1,21 @@
 
 <?php
+
+require_once __DIR__ . '/../app/Controllers/AuthController.php';
+
+$controller = new AuthController();
+
+$page = $_GET['page'] ?? 'home';
+
+if($page === 'login') {
+    if($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $controller->login();
+    } else {
+        $controller->showLogin();
+    }
+    exit;
+}
+
 $title = "Hệ thống quản lý Gara Ô tô";
 ?>
 <!DOCTYPE html>
@@ -12,5 +28,6 @@ $title = "Hệ thống quản lý Gara Ô tô";
 <body>
     <h1><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></h1>
     <p>Chào mừng đến với hệ thống quản lý Gara Ô tô.</p>
+    <a href="?page=login">Đăng nhập</a>
 </body>
 </html>
