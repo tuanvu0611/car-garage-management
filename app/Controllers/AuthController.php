@@ -1,34 +1,26 @@
-
 <?php
-
-require_once __DIR__ . '/../Services/AuthService.php';
-
-class AuthController
-{
-    private $authService;
-
-    public function __construct()
-    {
-        $this->authService = new AuthService();
-    }
-
-    public function showLogin()
-    {
-        require __DIR__ . '/../Views/login.php';
-    }
-
-    public function login()
-    {
-        $username = trim($_POST['username'] ?? '');
+declare(strict_types=1);
+class AuthController {
+    public function login(): void {
+        if (time() < ($_SESSION['login_after'] ?? 0)) throw new DomainException('Vui lòng chờ một phút trước khi thử lại.');
+        $username = $_POST['username'] ?? '';
         $password = $_POST['password'] ?? '';
-
-        if(!$this->authService->validateInput($username, $password)) {
-            $error = 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.';
-            require __DIR__ . '/../Views/login.php';
-            return;
+        if (!is_string($username) || !is_string($password) || trim($username) === '' || $password === '')
+            throw new DomainException('Vui lòng nhập tên đăng nhập và mật khẩu.');
+        if (!(new AuthService())->login(trim($username), $password)) {
+            $_SESSION['attempts'] = ($_SESSION['attempts'] ?? 0) + 1;
+            if ($_SESSION['attempts'] >= 5) {
+                $_SESSION['login_after'] = time() + 60;
+                $_SESSION['attempts'] = 0;
+            }
+            throw new DomainException('Tên đăng nhập hoặc mật khẩu không đúng.');
         }
-
-        $error = 'Chức năng xác thực tài khoản đang được phát triển.';
-        require __DIR__ . '/../Views/login.php';
+        unset($_SESSION['attempts'], $_SESSION['login_after']);
+        redirect('home');
+    }
+    public function logout(): never {
+        $_SESSION = [];
+        session_destroy();
+        redirect('login');
     }
 }
