@@ -67,4 +67,9 @@ final class RestockTest extends GarageTestCase
         self::assertSame($quantity, (int) $part['quantity']);
         self::assertSame(120000, (int) $part['price']);
     }
+    public function testRestockAcceptsExactInventoryLimit(): void
+    {
+        $this->restock('999999991');
+        $this->assertInventory(999999999);
+    }
 }

@@ -82,4 +82,19 @@ final class ValidationTest extends GarageTestCase
     {
         self::assertSame('&lt;script&gt;', e('<script>'));
     }
+    public function testHtmlAttributeQuotesAndAmpersandsAreEscaped(): void
+    {
+        self::assertSame('&quot;&#039;&amp;&lt;&gt;', e("\"'&<>"));
+    }
+
+    public function testUnknownPageIsDeniedEvenForAdmin(): void
+    {
+        $_SESSION['user'] = ['role' => 'admin'];
+        self::assertFalse(AuthService::can('unknown-page'));
+    }
+
+    public function testNumberAcceptsExactMaximum(): void
+    {
+        self::assertSame('999999999', GarageService::number(['quantity' => '999999999'], 'quantity', true, 1));
+    }
 }
