@@ -14,7 +14,7 @@ Hệ thống quản lý Gara Ô tô — Lab 07: Software Implementation & Versio
 
 ## Yêu cầu và cài đặt
 
-PHP **8.1 trở lên** với PDO MySQL; MySQL 8 hoặc MariaDB 10.4 trở lên. Không cần Composer.
+PHP **8.1 trở lên** với PDO MySQL; MySQL 8 hoặc MariaDB 10.4 trở lên. Ứng dụng không cần Composer khi chạy; bộ kiểm thử cần Composer 2.
 Thực hiện các lệnh tại thư mục chứa README này.
 
 1. Khởi động MySQL (ví dụ trong XAMPP).
@@ -79,8 +79,9 @@ Năm lần đăng nhập thất bại sẽ tạm chặn 60 giây trong session h
 ## Kiểm tra
 
 ```powershell
-php tests/validation.php
-php tests/restock.php
+composer install
+.\vendor\bin\phpunit
+.\vendor\bin\phpunit --order-by=random
 Get-ChildItem -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }
 ```
 
@@ -102,3 +103,29 @@ Xem [quy trình chi tiết](docs/git-flow.md). Minh chứng commit/PR lấy từ
 - Chu Tuấn Vũ — 52400331.
 - Nguyễn Trung Kiên — 52400284.
 - Nguyễn Thái An — 52400064.
+
+## PHPUnit và coverage (Lab08)
+
+Bộ test dùng PHPUnit 10.5 (PHP 8.1+), `pdo_sqlite`, DOM, XML, XMLWriter và mbstring.
+Bật extension ZIP để Composer giải nén gói. Chạy `composer install` từ `composer.lock` đã commit.
+Nếu PHP chưa có trong PATH: `$env:Path = 'C:\xampp\php;' + $env:Path`.
+Có thể dùng `composer test`, `composer test:random` hoặc `composer coverage`.
+
+Cài Xdebug phù hợp phiên bản PHP, kiến trúc, TS/NTS và compiler; khai báo `zend_extension` trong php.ini của CLI (`php --ini`).
+Bật coverage rồi chạy:
+
+```powershell
+$env:XDEBUG_MODE = 'coverage'
+.\vendor\bin\phpunit --coverage-text --coverage-html coverage
+Remove-Item Env:XDEBUG_MODE
+```
+
+Mở `coverage/index.html`. Lưu HTML và kết quả console làm minh chứng riêng, không commit `coverage/` hoặc `vendor/`.
+`phpunit.xml` chỉ thu thập `app/` và tính cả file chưa được chạy, loại thư viện bằng phạm vi include.
+Helper `e()` trong `config/bootstrap.php` được kiểm thử nhưng không nằm trong mẫu số coverage `app/`.
+Bộ test hiện tập trung validation, phân quyền, nhập kho và khôi phục form; không đại diện toàn bộ nghiệp vụ.
+Mỗi test nhập kho dùng SQLite in-memory riêng, không cần MySQL hoặc `.env`; xem thêm checklist tích hợp.
+Quy chuẩn: [coding-standards.md](docs/coding-standards.md).
+
+Lab08 dùng PHPUnit thay Jest/Supertest do dự án PHP. Nếu giảng viên bắt buộc công cụ trong mẫu Node.js,
+nhóm cần xác nhận việc thay thế với giảng viên.
