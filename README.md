@@ -80,8 +80,8 @@ Năm lần đăng nhập thất bại sẽ tạm chặn 60 giây trong session h
 
 ```powershell
 composer install
-.\vendor\bin\phpunit
-.\vendor\bin\phpunit --order-by=random
+composer test
+composer test:random
 Get-ChildItem -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }
 ```
 
