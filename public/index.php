@@ -24,8 +24,15 @@ if (!is_string($page) || !isset($pages[$page])) {
             if (!is_string($token) || !hash_equals($_SESSION['csrf'], $token)) {
                 http_response_code(403); throw new DomainException('Phiên biểu mẫu không hợp lệ. Hãy tải lại trang.');
             }
-            if ($page === 'login') (new AuthController())->login();
-            elseif ($page === 'logout') (new AuthController())->logout();
+           if ($page === 'login') {
+                $repository = new GarageRepository(db());
+                $authService = new AuthService($repository);
+                (new AuthController($authService))->login();
+            } elseif ($page === 'logout') {
+                $repository = new GarageRepository(db());
+                $authService = new AuthService($repository);
+                (new AuthController($authService))->logout();
+            }
             elseif (AuthService::can($page) && $page !== 'home') {
                 (new GarageService(new GarageRepository(db())))->save($page, $_POST);
                 $_SESSION['flash'] = 'Đã lưu thành công.';
