@@ -61,32 +61,34 @@ class GarageService {
     private function repairAction(array $input, string $action): void {
         $r = $this->repository;
         $db = $r->connection();
+        $lock = $db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
         $db->beginTransaction();
         try {
             $id = self::number($input, 'repair_id', true, 1);
-            $repair = $r->query('SELECT * FROM repairs WHERE id=? FOR UPDATE', [$id])->fetch();
+            $repair = $r->query('SELECT * FROM repairs WHERE id=?' . $lock, [$id])->fetch();
             if (!$repair || $repair['status'] !== 'open') throw new DomainException('Chỉ được sửa phiếu đang mở.');
-            if ($action === 'complete') {
-                $r->query("UPDATE repairs SET status='completed' WHERE id=?", [$id]);
-            } else {
-                $partId = self::number($input, 'part_id', true, 1);
-                $quantity = self::number($input, 'quantity', true, 1);
-                $part = $r->query('SELECT * FROM parts WHERE id=? FOR UPDATE', [$partId])->fetch();
-                if (!$part || $part['quantity'] < (int)$quantity) throw new DomainException('Phụ tùng không đủ tồn kho.');
-                $r->query('UPDATE parts SET quantity=quantity-? WHERE id=?', [$quantity, $partId]);
-                $r->query('INSERT INTO repair_parts(repair_id,part_id,quantity,unit_price) VALUES (?,?,?,?)',
-                    [$id, $partId, $quantity, $part['price']]);
-            }
+                if ($action === 'complete') {
+                    $r->query("UPDATE repairs SET status='completed' WHERE id=?", [$id]);
+                } else {
+                    $partId = self::number($input, 'part_id', true, 1);
+                    $quantity = self::number($input, 'quantity', true, 1);
+                    $part = $r->query('SELECT * FROM parts WHERE id=?' . $lock, [$partId])->fetch();
+                    if (!$part || $part['quantity'] < (int)$quantity) throw new DomainException('Phụ tùng không đủ tồn kho.');
+                    $r->query('UPDATE parts SET quantity=quantity-? WHERE id=?', [$quantity, $partId]);
+                    $r->query('INSERT INTO repair_parts(repair_id,part_id,quantity,unit_price) VALUES (?,?,?,?)',
+                        [$id, $partId, $quantity, $part['price']]);
+                    }
             $db->commit();
         } catch (Throwable $error) { $db->rollBack(); throw $error; }
     }
     private function invoice(array $input): void {
         $r = $this->repository;
         $db = $r->connection();
+        $lock = $db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
         $db->beginTransaction();
         try {
             $id = self::number($input, 'repair_id', true, 1);
-            $repair = $r->query('SELECT * FROM repairs WHERE id=? FOR UPDATE', [$id])->fetch();
+            $repair = $r->query('SELECT * FROM repairs WHERE id=?' . $lock, [$id])->fetch();
             if (!$repair || $repair['status'] !== 'completed') throw new DomainException('Chỉ lập hóa đơn cho phiếu đã hoàn tất.');
             $r->query('INSERT INTO invoices(repair_id,total) SELECT r.id, r.labor_cost + COALESCE(SUM(p.quantity*p.unit_price),0) FROM repairs r LEFT JOIN repair_parts p ON p.repair_id=r.id WHERE r.id=? GROUP BY r.id,r.labor_cost', [$id]);
             $db->commit();
