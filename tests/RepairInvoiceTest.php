@@ -47,6 +47,13 @@ final class RepairInvoiceTest extends GarageTestCase
             total NUMERIC NOT NULL
         )');
 
+        $this->db->exec('CREATE TABLE payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            invoice_id INTEGER NOT NULL,
+            amount NUMERIC NOT NULL,
+            paid_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )');
+
         $this->db->exec("INSERT INTO repairs VALUES
             (1, 1, 'Thay dầu', 500000, 'open'),
             (2, 1, 'Sửa phanh', 300000, 'completed')");
@@ -55,6 +62,17 @@ final class RepairInvoiceTest extends GarageTestCase
             (1, 'Lọc dầu', 10, 120000)");
 
         $this->service = new GarageService(new GarageRepository($this->db));
+    }
+
+    private function createPaymentInvoice(float $total = 500000): int
+    {
+        $statement = $this->db->prepare(
+            'INSERT INTO invoices(repair_id, total) VALUES (?, ?)'
+        );
+
+        $statement->execute([2, $total]);
+
+        return (int)$this->db->lastInsertId();
     }
 
     public function testCompleteOpenRepair(): void
@@ -202,6 +220,113 @@ final class RepairInvoiceTest extends GarageTestCase
 
         $this->service->save('invoices', [
             'repair_id' => '99'
+        ]);
+    }
+
+    public function testCreatePaymentSuccessfully(): void
+    {
+        $invoiceId = $this->createPaymentInvoice();
+
+        $this->service->save('payments', [
+            'invoice_id' => (string)$invoiceId,
+            'amount' => '200000'
+        ]);
+
+        $amount = $this->db->query(
+            'SELECT amount FROM payments WHERE invoice_id=' . $invoiceId
+        )->fetchColumn();
+
+        self::assertEquals(200000, $amount);
+    }
+
+    public function testAllowMultiplePaymentsForSameInvoice(): void
+    {
+        $invoiceId = $this->createPaymentInvoice();
+
+        $this->service->save('payments', [
+            'invoice_id' => (string)$invoiceId,
+            'amount' => '200000'
+        ]);
+
+        $this->service->save('payments', [
+            'invoice_id' => (string)$invoiceId,
+            'amount' => '100000'
+        ]);
+
+        $total = $this->db->query(
+            'SELECT SUM(amount) FROM payments WHERE invoice_id=' . $invoiceId
+        )->fetchColumn();
+
+        self::assertEquals(300000, $total);
+    }
+
+    public function testCannotPayMoreThanOutstandingDebt(): void
+    {
+        $invoiceId = $this->createPaymentInvoice();
+
+        $this->expectException(DomainException::class);
+
+        $this->service->save('payments', [
+            'invoice_id' => (string)$invoiceId,
+            'amount' => '600000'
+        ]);
+    }
+
+    public function testCannotPayMissingInvoice(): void
+    {
+        $this->expectException(DomainException::class);
+
+        $this->service->save('payments', [
+            'invoice_id' => '99',
+            'amount' => '100000'
+        ]);
+    }
+
+    public function testCannotPayZeroAmount(): void
+    {
+        $invoiceId = $this->createPaymentInvoice();
+
+        $this->expectException(DomainException::class);
+
+        $this->service->save('payments', [
+            'invoice_id' => (string)$invoiceId,
+            'amount' => '0'
+        ]);
+    }
+
+    public function testCannotPayNegativeAmount(): void
+    {
+        $invoiceId = $this->createPaymentInvoice();
+
+        $this->expectException(DomainException::class);
+
+        $this->service->save('payments', [
+            'invoice_id' => (string)$invoiceId,
+            'amount' => '-100000'
+        ]);
+    }
+
+    public function testCannotPayWithInvalidAmount(): void
+    {
+        $invoiceId = $this->createPaymentInvoice();
+
+        $this->expectException(DomainException::class);
+
+        $this->service->save('payments', [
+            'invoice_id' => (string)$invoiceId,
+            'amount' => 'abc'
+        ]);
+    }
+
+    public function testCannotPayWithMoreThanTwoDecimalPlaces(): void
+    {
+        $invoiceId = $this->createPaymentInvoice();
+
+        $this->expectException(DomainException::class);
+
+        $this->service->save('payments', [
+            'invoice_id' => (string)$invoiceId,
+            'amount' => '100000.123'
         ]);
     }
 }
