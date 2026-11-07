@@ -1,0 +1,59 @@
+-- Import into an existing database (utf8mb4). Compatible with MySQL 8 / MariaDB 10.4.
+CREATE TABLE IF NOT EXISTS users (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ username VARCHAR(50) NOT NULL UNIQUE,
+ password VARCHAR(255) NOT NULL,
+ full_name VARCHAR(100) NOT NULL,
+ role ENUM('admin','manager','technician','accountant') NOT NULL DEFAULT 'technician',
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS customers (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ full_name VARCHAR(100) NOT NULL,
+ phone VARCHAR(20) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS vehicles (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ customer_id INT NOT NULL,
+ plate VARCHAR(20) NOT NULL UNIQUE,
+ model VARCHAR(100) NOT NULL,
+ FOREIGN KEY (customer_id) REFERENCES customers(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS repairs (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ vehicle_id INT NOT NULL,
+ description TEXT NOT NULL,
+ labor_cost DECIMAL(15,2) NOT NULL CHECK (labor_cost >= 0),
+ status ENUM('open','completed') NOT NULL DEFAULT 'open',
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS parts (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ name VARCHAR(100) NOT NULL UNIQUE,
+ quantity INT NOT NULL CHECK (quantity >= 0),
+ price DECIMAL(15,2) NOT NULL CHECK (price >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS repair_parts (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ repair_id INT NOT NULL,
+ part_id INT NOT NULL,
+ quantity INT NOT NULL CHECK (quantity > 0),
+ unit_price DECIMAL(15,2) NOT NULL CHECK (unit_price >= 0),
+ FOREIGN KEY (repair_id) REFERENCES repairs(id),
+ FOREIGN KEY (part_id) REFERENCES parts(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS invoices (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ repair_id INT NOT NULL UNIQUE,
+ total DECIMAL(15,2) NOT NULL CHECK (total >= 0),
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY (repair_id) REFERENCES repairs(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS payments (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ invoice_id INT NOT NULL,
+ amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
+ paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
