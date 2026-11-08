@@ -1,0 +1,10 @@
+.env
+/vendor/
+/node_modules/
+/storage/logs/
+/storage/backups/
+.DS_Store
+Thumbs.db
+/coverage/
+/.phpunit.cache/
+/.tools/
